@@ -15,7 +15,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Union
 
 
@@ -52,10 +52,24 @@ def is_signed_by(cert: x509.Certificate, ca_cert: x509.Certificate) -> bool:
 
 
 def is_within_validity(cert: x509.Certificate, now: datetime | None = None) -> bool:
-	"""Return True if certificate is within its not_valid_before/after window."""
+	"""Return True if certificate is within its not_valid_before/after window.
+
+	Uses timezone-aware `.not_valid_before_utc` / `.not_valid_after_utc` when
+	available to avoid CryptographyDeprecationWarning. Falls back to the
+	older naive datetimes if necessary for compatibility.
+	"""
+	# Prefer timezone-aware UTC fields when provided by newer cryptography
+	if hasattr(cert, "not_valid_before_utc") and hasattr(cert, "not_valid_after_utc"):
+		nb = cert.not_valid_before_utc
+		na = cert.not_valid_after_utc
+		if now is None:
+			now = datetime.now(timezone.utc)
+		# nb/na are timezone-aware datetimes
+		return nb <= now <= na
+
+	# Fallback for older cryptography versions that provide naive datetimes
 	if now is None:
 		now = datetime.utcnow()
-	# cert.not_valid_before / not_valid_after are timezone-naive in this project
 	return cert.not_valid_before <= now <= cert.not_valid_after
 
 

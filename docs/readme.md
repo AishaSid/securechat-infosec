@@ -85,7 +85,46 @@ Key variables:
 - `CLIENT_CERT` — client certificate path (default `certs/client-cert.crt`)
 
 
-# Step 4
+# Step 4 — Client / Server Demo (integration)
+
+- **What was added:**
+	- `app/server.py` and `app/client.py` — simple TCP demo that exchanges certificates, validates them against the Root CA, performs X25519 ECDH, derives an AES key via HKDF, and exchanges AES‑GCM encrypted messages.
+	- `scripts/run_demo.py` — helper that starts the server in a background thread and runs the client to perform one handshake (useful for a single-run demo).
+
+- **How to run the demo (PowerShell):**
+
+```powershell
+# Option A: run the combined demo (one-shot)
+python scripts/run_demo.py
+
+# Option B: run server and client separately (two terminals)
+# Terminal 1 (server)
+python -c "from app import server; server.main()"
+# Terminal 2 (client)
+python -c "from app import client; client.main()"
+```
+
+- **Expected clean output:**
+
+```
+Server listening on 127.0.0.1:9000
+Accepted connection from ('127.0.0.1', <port>)
+Server says: b'Welcome from server'
+Received from client: b'Hello from client'
+```
+
+- **Notes / configuration:**
+	- The demo reads `.env` values for `HOST`, `PORT`, and certificate paths if present. See the `.env` sample earlier in this README.
+	- The client and server validate certificates using `app/crypto/pki.py` (signature + validity window). By default CN/SAN matching is not enforced in the demo; enable it by passing `expected_cn` to `validate_certificate` if you require a strict name check.
+
+- **Suggested git commit for integration:**
+
+```powershell
+git add app/server.py app/client.py scripts/run_demo.py docs/readme.md
+git commit -m "Integrate DH/AES and PKI: add client/server demo and run_demo helper"
+git push origin main
+```
+
 
 
 
