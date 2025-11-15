@@ -73,6 +73,20 @@ Notes:
 - The DH helper uses X25519 (Curve25519) to derive a raw shared secret; HKDF-SHA256 derives an AES key from that secret.
 - AES-GCM is used for authenticated encryption (nonce length = 12 bytes). Keep nonces unique per key.
 
+## Configuration via `.env`
+
+You can set runtime values in a `.env` file at the repository root (an example `.env` is provided). The server and client read these variables automatically using `python-dotenv`.
+
+Key variables:
+- `HOST` — server bind address (default `127.0.0.1`)
+- `PORT` — server port (default `9000`)
+- `CA_PATH` — path to Root CA certificate (default `certs/ca-cert.crt`)
+- `SERVER_CERT` — server certificate path (default `certs/server-cert.crt`)
+- `CLIENT_CERT` — client certificate path (default `certs/client-cert.crt`)
+
+
+# Step 4
+
 
 
 
