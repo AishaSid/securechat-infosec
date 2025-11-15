@@ -117,15 +117,6 @@ Received from client: b'Hello from client'
 	- The demo reads `.env` values for `HOST`, `PORT`, and certificate paths if present. See the `.env` sample earlier in this README.
 	- The client and server validate certificates using `app/crypto/pki.py` (signature + validity window). By default CN/SAN matching is not enforced in the demo; enable it by passing `expected_cn` to `validate_certificate` if you require a strict name check.
 
-- **Suggested git commit for integration:**
-
-```powershell
-git add app/server.py app/client.py scripts/run_demo.py docs/readme.md
-git commit -m "Integrate DH/AES and PKI: add client/server demo and run_demo helper"
-git push origin main
-```
-
-
 
 
 
