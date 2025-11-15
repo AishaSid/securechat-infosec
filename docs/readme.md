@@ -52,14 +52,27 @@ python scripts/test_sign.py
 
 Expected result: the test prints a base64 signature and `Verification result: True`.
 
-## Git: commit & push
 
-Suggested commands and commit message:
+# Step 3 — AES / DH (Key agreement + AEAD)
+
+- **What was added:** `app/crypto/aes.py` (AES-GCM encrypt/decrypt + HKDF key derivation), `app/crypto/dh.py` (X25519 ECDH helpers), and `scripts/test_aes_dh.py` (end-to-end DH key agreement + AES-GCM encrypt/decrypt test).
+
+- **How to run the AES/DH test (PowerShell):**
 
 ```powershell
-git add -A
-git commit -m "Add CA/cert generation; implement PKI validation and RSA sign/verify test"
-git push origin main
+# Run DH + AES quick test
+python scripts/test_aes_dh.py
 ```
 
-# Step 3 
+Expected result (example):
+- `Shared secrets equal: True`
+- `Encrypted (len): <n> nonce: <hex>`
+- `Decrypted matches: True`
+
+Notes:
+- The DH helper uses X25519 (Curve25519) to derive a raw shared secret; HKDF-SHA256 derives an AES key from that secret.
+- AES-GCM is used for authenticated encryption (nonce length = 12 bytes). Keep nonces unique per key.
+
+
+
+
