@@ -1,15 +1,12 @@
 
 # SecureChat – Assignment #2 (CS-3002 Information Security, Fall 2025)
-
-This repository is the **official code skeleton** for your Assignment #2.  
-You will build a **console-based, PKI-enabled Secure Chat System** in **Python**, demonstrating how cryptographic primitives combine to achieve:
+ 
+A **console-based, PKI-enabled Secure Chat System** in **Python**, demonstrating how cryptographic primitives combine to achieve:
 
 **Confidentiality, Integrity, Authenticity, and Non-Repudiation (CIANR)**.
 
-
-## 🧩 Overview
-
-You are provided only with the **project skeleton and file hierarchy**.  
+## Overview
+  
 Each file contains docstrings and `TODO` markers describing what to implement.
 
 Your task is to:
@@ -17,7 +14,7 @@ Your task is to:
 - Integrate cryptographic primitives correctly to satisfy the assignment spec.
 - Produce evidence of security properties via Wireshark, replay/tamper tests, and signed session receipts.
 
-## 🏗️ Folder Structure
+## Folder Structure
 ```
 securechat-skeleton/
 ├─ app/
@@ -46,7 +43,7 @@ securechat-skeleton/
 └─ .github/workflows/ci.yml  # Compile-only sanity check (no execution)
 ```
 
-## ⚙️ Setup Instructions
+## Setup Instructions
 
 1. **Fork this repository** to your own GitHub account(using official nu email).  
    All development and commits must be performed in your fork.
@@ -82,7 +79,7 @@ securechat-skeleton/
    python -m app.client
    ```
 
-## 🚫 Important Rules
+## Important Rules
 
 - **Do not use TLS/SSL or any secure-channel abstraction**  
   (e.g., `ssl`, HTTPS, WSS, OpenSSL socket wrappers).  
@@ -92,7 +89,7 @@ securechat-skeleton/
 - Do **not commit secrets** (certs, private keys, salts, `.env` values).
 - Your commits must reflect progressive development — at least **10 meaningful commits**.
 
-## 🧾 Deliverables
+## Deliverables
 
 When submitting on Google Classroom (GCR):
 
@@ -102,7 +99,7 @@ When submitting on Google Classroom (GCR):
 4. `RollNumber-FullName-Report-A02.docx`
 5. `RollNumber-FullName-TestReport-A02.docx`
 
-## 🧪 Test Evidence Checklist
+## Test Evidence Checklist
 
 ✔ Wireshark capture (encrypted payloads only)  
 ✔ Invalid/self-signed cert rejected (`BAD_CERT`)  
