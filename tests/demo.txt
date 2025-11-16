@@ -1,0 +1,34 @@
+
+[client] Hello from client (signature OK: True )
+Enter messages to send to server. Type /quit to exit.
+hi i hope i am the server
+
+[server] hi i hope i am the server  (signature OK: True )
+okay yeah, i see you are the servr, then i m the client
+
+[client] okay yeah, i see you are the servr, then i m the client  (signature OK: True )
+no i don't think you are the client, i thin you are the attacker
+
+[server] no i don't think you are the client, i thin you are the attacker  (signature OK: True )
+man, my msg has the key with it, which literally says 'OK', stop manipulating me
+
+[client] man, my msg has the key with it, which literally says 'OK', stop manipulating me (signature OK: True )
+eh eh... you are the mean fellaw 
+
+[server] eh eh... you are the mean fellaw  (signature OK: True )
+how do i quit ? 
+
+[client] how do i quit ?  (signature OK: True )
+idk, type exit 
+
+[server] idk, type exit  (signature OK: True )
+exit 
+
+[client] exit  (signature OK: True )
+ok, quit 
+
+[server] ok, quit  (signature OK: True )
+quit
+
+[client] quit (signature OK: True )
+/quit
