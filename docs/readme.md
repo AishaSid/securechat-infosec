@@ -241,6 +241,41 @@ Inspecting data
 
 	# Verify all entries using the CA certificate
 	python -m storage.transcript transcripts.db --verify-all --ca certs/ca-cert.crt
+
+# Step 6 — Tamper Tests & Replay Detection
+
+- **Purpose:** Demonstrate that stored transcripts are tamper-evident and to exercise replay-detection and session receipts added to the storage layer.
+- **Where:** authoritative tamper/debug scripts are under `tests/tamper/`.
+
+- Scripts and usage:
+	- `tests/tamper/tamper_transcript.py` — flip a byte in a transcript row (ciphertext, signature, or message), creating a timestamped backup of the DB first. Example:
+
+		```powershell
+		# tamper the signature of entry id=3
+		python .\tests\tamper\tamper_transcript.py --db transcripts.db --id 3 --field signature --xor 01
+		```
+
+	- `tests/tamper/tamper_debug.py` — helper that copies a source DB to `tests/transcripts_test.db`, prints verification for a chosen entry, flips a signature byte, and prints verification again (useful for reproducing report output):
+
+		```powershell
+		python .\tests\tamper\tamper_debug.py --src transcripts.db --db tests\transcripts_test.db --id 3 --xor 01
+		```
+
+- **Expected behavior:**
+	- Before tamper: `verify_entry -> True` (if the CA and certs are available and signatures match)
+	- After tamper: `verify_entry -> False` (signature/ciphertext mismatch should be detected)
+
+- **Replay detection & receipts:**
+	- The transcript module includes `detect_replays()` which looks for duplicated ciphertext/nonce pairs and signature re-use across different messages. Run it from a small script or import `storage.transcript.detect_replays` to inspect suspicious entries.
+	- The server now issues a signed session receipt at session end. Receipts are stored in the `session_receipts` table in the DB. Use `storage.session.create_receipt(...)` and `storage.session.verify_receipt(...)` to create and verify receipts programmatically.
+
+- **Quick workflow to produce evidence for the report:**
+	1. Initialize transcripts: `python -c "import storage.transcript as t; t.init_db('transcripts.db')"`
+ 2. Run the demo to produce transcript entries: `python .\tests\demo\run_demo.py` (or the one-shot `python scripts/run_demo.py` stub which points to `tests/demo`)
+ 3. Run the debug tamper script to reproduce verification failure: `python .\tests\tamper\tamper_debug.py --src transcripts.db --id 3`
+ 4. Export transcripts (optional): `python .\tests\tools\export_transcripts.py --all --db transcripts.db --out exports`
+
+- **Security note:** tamper tests operate on copies or create backups; do not run destructive tamper commands against production or canonical DBs unless you intend to alter them. The `tamper_transcript.py` script creates a `.bak.<ts>` backup before modifying the DB.
 	```
 
 Notes:
