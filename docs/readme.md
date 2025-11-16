@@ -118,11 +118,102 @@ Received from client: b'Hello from client'
 
 ---
 
-## Step 4a — Storage / Transcript (implemented)
+# Step 5a — Storage / Transcript (implemented)
 
 - Implementations provided in this repository:
 	- `storage/db.py` — MySQL-backed user store (functions: `init_db()`, `create_user()`, `verify_user()`, `change_password()`) and a small CLI for `--init`, `--add`, `--verify`, `--change`.
 	- `storage/transcript.py` — SQLite append-only transcript store and verifier (`init_db()`, `add_entry()`, `list_entries()`, `verify_entry()`, `verify_all()`), plus a small CLI to list/verify entries.
+
+- Quick initialization commands (PowerShell):
+
+	- Initialize the MySQL `users` table (reads DB credentials from `.env`):
+
+		```powershell
+		# If you have Docker Desktop running, use the helper to create a local MySQL and init the table
+		.\scripts\init_mysql_local.ps1
+
+		# OR, if a MySQL server is already accessible (and .env contains credentials):
+		python -m storage.db --init
+		```
+
+	- Initialize the transcript SQLite DB (creates `transcripts.db` by default):
+
+		```powershell
+		python -c "from dotenv import load_dotenv; load_dotenv(); import storage.transcript as t; t.init_db('transcripts.db'); print('transcript DB initialized')"
+		```
+
+# Step 5b - DB integration 
+
+This project uses two storage backends:
+
+- **MySQL (`storage/db.py`)** — stores application user accounts (`users` table). Use the provided helper to initialize the schema and manage users.
+- **SQLite `transcripts.db` (`storage/transcript.py`)** — append-only transcript log where chat ciphertexts, signatures and sender certificates are stored for offline verification and non-repudiation.
+
+What to do for the assignment:
+
+- Initialize the MySQL users table (reads DB credentials from `.env`):
+
+	```powershell
+	# use the helper to start a local MySQL container and initialize the schema
+	.\scripts\init_mysql_local.ps1
+
+	# or, if you already have a MySQL server and .env is configured:
+	python -m storage.db --init
+	```
+
+- Create a user (example):
+
+	```powershell
+	# interactive (prompts for password)
+	python -m storage.db --add alice
+
+	# programmatic (non-interactive)
+	python - <<'PY'
+	from dotenv import load_dotenv
+	load_dotenv()
+	import storage.db as db
+	print('created id:', db.create_user('alice','TestPass123!'))
+	PY
+	```
+
+- Initialize the transcript DB (SQLite):
+
+	```powershell
+	python -c "from dotenv import load_dotenv; load_dotenv(); import storage.transcript as t; t.init_db('transcripts.db'); print('transcript DB initialized')"
+	```
+
+- Run the demo to generate transcripts and then export them into readable JSON:
+
+	```powershell
+	# run the one-shot demo (generates transcript entries)
+	python scripts/run_demo.py
+
+	# export all transcripts to human-readable JSON files (exports/)
+	python scripts/export_transcripts.py --all --db transcripts.db --out exports
+	```
+
+	The exporter produces files like `exports/transcript_1.json` containing:
+	- `cert_pem` (PEM string)
+	- `signature_b64` / `signature_hex`
+	- `ciphertext_b64` / `ciphertext_hex`
+	- `nonce_b64` / `nonce_hex`
+	- `message_utf8` (if plaintext was recorded) or `message_hash_sha256`
+	- `verified` (boolean: result of verifying the signature and certificate against the CA)
+
+Security & privacy notes
+- The transcript log currently stores plaintext `message` when the application records it. If you require privacy, consider storing only `ciphertext` + `signature` + `cert_pem` and a `message_hash` (SHA-256) instead of plaintext.
+- Protect `transcripts.db` and MySQL credentials: do not commit secrets to the repository. Use filesystem protections and an appropriate retention policy for stored transcripts.
+
+Inspecting data
+- Quick checks:
+	- List transcripts:
+		```powershell
+		python -m storage.transcript transcripts.db --list
+		```
+	- Verify all transcripts against the CA:
+		```powershell
+		python -m storage.transcript transcripts.db --verify-all --ca certs/ca-cert.crt
+		```
 
 - Quick initialization commands (PowerShell):
 
@@ -156,7 +247,5 @@ Notes:
 - `storage/db.py` reads DB connection parameters from `.env` (or environment): `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (defaults are `127.0.0.1:3306`, `scuser`, `scpass`, `securechat`).
 - `storage/transcript.py` stores full certificate PEMs and signatures in the SQLite `transcripts` table as BLOBs; `verify_entry()` validates the cert against the CA and checks the signature.
 
-
-# Step 5 - DB integration 
 
 
