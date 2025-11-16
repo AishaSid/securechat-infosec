@@ -11,7 +11,9 @@ from dotenv import load_dotenv
 
 load_dotenv()  # load .env file if present
 
-from app.crypto import pki, dh, aes
+from app.crypto import pki, dh, aes, sign as sign_mod
+from storage import transcript as transcript_store
+import base64
 
 
 def _send_bytes(conn: socket.socket, data: bytes) -> None:
@@ -43,6 +45,13 @@ def handle_client(conn: socket.socket, *, ca_path: str | None = None, server_cer
     server_cert = open(server_cert_path, "rb").read()
     _send_bytes(conn, server_cert)
 
+    # load server private key for signing outgoing messages
+    server_key_path = os.getenv("SERVER_KEY", "certs/server-private.key")
+    try:
+        server_priv = sign_mod.load_private_key(server_key_path)
+    except Exception:
+        server_priv = None
+
     # receive client certificate
     client_cert = _recv_bytes(conn)
     # validate client certificate (signed by CA)
@@ -63,8 +72,32 @@ def handle_client(conn: socket.socket, *, ca_path: str | None = None, server_cer
     key = dh.derive_aes_key_from_shared(secret, info=b"securechat handshake", length=32)
 
     # send an encrypted welcome message
-    nonce, ct = aes.encrypt(key, b"Welcome from server")
+    welcome = b"Welcome from server"
+    # sign the welcome message with server long-term key if available
+    sig = sign_mod.sign_bytes(server_priv, welcome) if server_priv is not None else b""
+    payload = len(sig).to_bytes(2, "big") + sig + welcome
+    nonce, ct = aes.encrypt(key, payload)
     _send_bytes(conn, nonce + ct)
+
+    # store server-sent transcript entry
+    try:
+        transcript_db = os.getenv("TRANSCRIPT_DB", "transcripts.db")
+        transcript_store.init_db(transcript_db)
+        # sender_cn from server cert
+        sender_cn = "server"
+        try:
+            # attempt to extract CN
+            from cryptography import x509
+            from cryptography.x509.oid import NameOID
+            cert = x509.load_pem_x509_certificate(server_cert)
+            cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+            if cn_attrs:
+                sender_cn = cn_attrs[0].value
+        except Exception:
+            pass
+        transcript_store.add_entry(transcript_db, sender_cn, server_cert, welcome, ct, nonce, sig)
+    except Exception:
+        pass
 
     # receive encrypted response
     resp = _recv_bytes(conn)
@@ -72,7 +105,43 @@ def handle_client(conn: socket.socket, *, ca_path: str | None = None, server_cer
     recv_ct = resp[12:]
     try:
         pt = aes.decrypt(key, recv_nonce, recv_ct)
-        print("Received from client:", pt)
+        # payload format: 2-byte siglen | signature | plaintext
+        if len(pt) >= 2:
+            siglen = int.from_bytes(pt[:2], "big")
+            sig = pt[2:2+siglen]
+            message = pt[2+siglen:]
+        else:
+            sig = b""
+            message = pt
+
+        # verify signature using client_cert
+        verified = False
+        try:
+            pub = sign_mod.load_public_key_from_cert(client_cert)
+            verified = sign_mod.verify_bytes(pub, message, sig)
+        except Exception:
+            verified = False
+
+        print("Received from client:", message, "signature OK:" , verified)
+
+        # store received transcript entry (signed by client)
+        try:
+            transcript_db = os.getenv("TRANSCRIPT_DB", "transcripts.db")
+            transcript_store.init_db(transcript_db)
+            # extract client CN if possible
+            sender_cn = "client"
+            try:
+                from cryptography import x509
+                from cryptography.x509.oid import NameOID
+                cert = x509.load_pem_x509_certificate(client_cert)
+                cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+                if cn_attrs:
+                    sender_cn = cn_attrs[0].value
+            except Exception:
+                pass
+            transcript_store.add_entry(transcript_db, sender_cn, client_cert, message, recv_ct, recv_nonce, sig)
+        except Exception:
+            pass
     except Exception as e:
         print("Decryption failed:", e)
 

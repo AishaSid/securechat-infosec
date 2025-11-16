@@ -28,9 +28,10 @@ securechat-skeleton/
 │  ├─ common/
 │  │  ├─ protocol.py         # Pydantic message models (hello/login/msg/receipt)
 │  │  └─ utils.py            # Helpers (base64, now_ms, sha256_hex)
-│  └─ storage/
-│     ├─ db.py               # MySQL user store (salted SHA-256 passwords)
-│     └─ transcript.py       # Append-only transcript + transcript hash
+├─ storage/
+│  ├─ db.py               # MySQL user store (salted SHA-256 passwords)
+│  └─ transcript.py       # Append-only transcript + transcript hash
+
 ├─ scripts/
 │  ├─ gen_ca.py              # Create Root CA (RSA + self-signed X.509)
 │  └─ gen_cert.py            # Issue client/server certs signed by Root CA

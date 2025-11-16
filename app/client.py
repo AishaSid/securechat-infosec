@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.crypto import pki, dh, aes
+from app.crypto import pki, dh, aes, sign as sign_mod
+from storage import transcript as transcript_store
 
 
 def _send_bytes(s: socket.socket, data: bytes) -> None:
@@ -68,13 +69,75 @@ def main(host: str = None, port: int = None, *, ca_path: str | None = None, clie
         ct = enc[12:]
         try:
             pt = aes.decrypt(key, nonce, ct)
-            print("Server says:", pt)
+            # extract signature length and signature
+            if len(pt) >= 2:
+                siglen = int.from_bytes(pt[:2], "big")
+                sig = pt[2:2+siglen]
+                message = pt[2+siglen:]
+            else:
+                sig = b""
+                message = pt
+
+            # verify server signature against received server_cert
+            verified = False
+            try:
+                pub = sign_mod.load_public_key_from_cert(server_cert)
+                verified = sign_mod.verify_bytes(pub, message, sig)
+            except Exception:
+                verified = False
+
+            print("Server says:", message, "signature OK:", verified)
+
+            # store received transcript entry
+            try:
+                transcript_db = os.getenv("TRANSCRIPT_DB", "transcripts.db")
+                transcript_store.init_db(transcript_db)
+                sender_cn = "server"
+                try:
+                    from cryptography import x509
+                    from cryptography.x509.oid import NameOID
+                    cert = x509.load_pem_x509_certificate(server_cert)
+                    cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+                    if cn_attrs:
+                        sender_cn = cn_attrs[0].value
+                except Exception:
+                    pass
+                transcript_store.add_entry(transcript_db, sender_cn, server_cert, message, ct, nonce, sig)
+            except Exception:
+                pass
         except Exception as e:
             print("Failed to decrypt server message:", e)
 
-        # send encrypted acknowledgement
-        nonce2, ct2 = aes.encrypt(key, b"Hello from client")
+        # send encrypted acknowledgement with client signature
+        client_key_path = os.getenv("CLIENT_KEY", "certs/client-private.key")
+        try:
+            client_priv = sign_mod.load_private_key(client_key_path)
+        except Exception:
+            client_priv = None
+
+        ack = b"Hello from client"
+        sig = sign_mod.sign_bytes(client_priv, ack) if client_priv is not None else b""
+        payload = len(sig).to_bytes(2, "big") + sig + ack
+        nonce2, ct2 = aes.encrypt(key, payload)
         _send_bytes(s, nonce2 + ct2)
+
+        # store client-sent transcript entry
+        try:
+            transcript_db = os.getenv("TRANSCRIPT_DB", "transcripts.db")
+            transcript_store.init_db(transcript_db)
+            sender_cn = "client"
+            try:
+                from cryptography import x509
+                from cryptography.x509.oid import NameOID
+                cert = x509.load_pem_x509_certificate(cert_bytes)
+                cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+                if cn_attrs:
+                    sender_cn = cn_attrs[0].value
+            except Exception:
+                pass
+            transcript_store.add_entry(transcript_db, sender_cn, cert_bytes, ack, ct2, nonce2, sig)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
