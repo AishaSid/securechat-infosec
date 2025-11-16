@@ -1,0 +1,48 @@
+i221281-AishaSiddiqa-TestReport-A02
+
+From: Aisha Siddiqa (Roll Number: 22i-1281)
+Date: 2025-11-16
+
+Subject: Assignment A02 — Test Report and Evidence
+
+Purpose
+- Provide step-by-step test evidence for the securechat demo showing handshake, message signing, transcript persistence, tamper detection, and export.
+
+Tests performed
+1. Handshake + Message Exchange
+- Command: `python .\scripts\run_demo.py`
+- Expected: client and server perform certificate exchange, ECDH key derivation, and exchange signed/encrypted messages.
+- Observed: signed messages printed on both sides; transcripts stored in `transcripts.db`.
+
+2. Transcript Verification
+- Command: `python .\scripts\show_transcripts.py`
+- Expected: entries listed with `verified: True`.
+- Observed: multiple entries verified True.
+
+3. Tamper Test (signature)
+- Command: `python .\scripts\tamper_transcript.py --db transcripts.db --id 3 --field signature --offset 0 --xor 01`
+- Expected: verification before tamper True, after tamper False.
+- Observed (actual run performed on 2025-11-16):
+
+  Before tamper:
+  - signature (hex start): 3f9e5192de174ab77df1988968c38eea...
+  - `verify_entry` -> True
+  - direct verify -> True
+
+  After tamper (flipped first byte with 0x01):
+  - signature (hex start): 3e9e5192de174ab77df1988968c38eea...
+  - `verify_entry` -> False
+  - direct verify -> False
+
+4. Export Transcripts
+- Command: `python .\scripts\export_transcripts.py --all --out exports --db transcripts.db`
+- Expected: `exports/transcript_<id>.json` files showing `verified: true/false`.
+
+How to reproduce and collect evidence
+- Steps:
+  1. Run the demo and let client/server exchange multiple messages.
+  2. Run `scripts/show_transcripts.py` to list ids.
+  3. Backup DB: copy `transcripts.db` to `transcripts.db.bak`.
+  4. Run `scripts/tamper_transcript.py` on a chosen id and field.
+  5. Run `scripts/show_transcripts.py` and `scripts/export_transcripts.py` to confirm verification status changed.
+
