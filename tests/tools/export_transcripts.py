@@ -10,8 +10,8 @@ For each entry this script writes a JSON file containing:
 - verified: boolean (signature + cert verification)
 
 Usage:
-  python scripts/export_transcripts.py --db transcripts.db --out exports --all
-  python scripts/export_transcripts.py --db transcripts.db --out exports --id 3
+  python tests/tools/export_transcripts.py --db transcripts.db --out exports --all
+  python tests/tools/export_transcripts.py --db transcripts.db --out exports --id 3
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import sys
-repo_root = Path(__file__).resolve().parents[1]
+repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 
 from storage import transcript as t
@@ -132,3 +132,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+*** End Patch

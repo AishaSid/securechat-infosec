@@ -19,6 +19,8 @@ import sqlite3
 from typing import Optional, Iterable, Dict, Any
 from datetime import datetime, timezone
 import base64
+import hashlib
+import json
 
 from app.crypto import sign as sign_mod
 from app.crypto import pki
@@ -37,6 +39,19 @@ def init_db(db_path: str) -> None:
             message BLOB,
             ciphertext BLOB,
             nonce BLOB,
+            signature BLOB NOT NULL
+        )
+        """
+    )
+    # session receipts table to store signed session summaries
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS session_receipts (
+            id INTEGER PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            signer_cn TEXT NOT NULL,
+            receipt_json BLOB NOT NULL,
             signature BLOB NOT NULL
         )
         """
@@ -100,9 +115,9 @@ def verify_entry(entry: Dict[str, Any], ca_pem: bytes, expected_cn: Optional[str
 
     try:
         pub = sign_mod.load_public_key_from_cert(cert_pem)
-        # verify_bytes will raise on failure
-        sign_mod.verify_bytes(pub, payload, sig)
-        return True
+        # verify_bytes returns a boolean; ensure we respect it
+        ok = sign_mod.verify_bytes(pub, payload, sig)
+        return bool(ok)
     except Exception:
         return False
 
@@ -118,6 +133,43 @@ def verify_all(db_path: str, ca_pem_path: str) -> Dict[int, bool]:
         ok = verify_entry(e, ca_pem)
         results[e["id"]] = ok
     return results
+
+
+def detect_replays(db_path: str) -> Dict[int, list]:
+    """Detect simple replay anomalies in the transcripts DB.
+
+    Returns a mapping entry_id -> list of issue strings. Issues include:
+      - 'ciphertext-replay' when same (ciphertext, nonce) seen before
+      - 'signature-reuse' when same signature used on different payloads
+    """
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute('SELECT id, ciphertext, nonce, message, signature FROM transcripts ORDER BY id')
+    seen_ct = {}
+    seen_sig = {}
+    issues = {}
+    for row in cur.fetchall():
+        rid, ctxt, nonce, msg, sig = row
+        issues[rid] = []
+        if ctxt is not None and nonce is not None:
+            key = (ctxt, nonce)
+            if key in seen_ct:
+                issues[rid].append('ciphertext-replay')
+            else:
+                seen_ct[key] = rid
+        if sig is not None:
+            payload = msg if msg is not None else ctxt
+            # payload may be None; use signature presence check
+            if sig in seen_sig:
+                prev_payload = seen_sig[sig]
+                if prev_payload != payload:
+                    issues[rid].append('signature-reuse')
+            else:
+                seen_sig[sig] = payload
+        if not issues[rid]:
+            del issues[rid]
+    conn.close()
+    return issues
 
 
 if __name__ == "__main__":

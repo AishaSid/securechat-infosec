@@ -3,7 +3,7 @@ load_dotenv()
 import os
 from pathlib import Path
 
-repo_root = Path(__file__).resolve().parents[1]
+repo_root = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(repo_root))
 
@@ -35,3 +35,4 @@ for e in entries:
         ok = False
         print('verify raised', exc)
     print('  verified:', ok)
+*** End Patch

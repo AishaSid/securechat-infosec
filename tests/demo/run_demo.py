@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Run server and client demo in-process for a single handshake and print output.
 
 This starts the server in a background thread (it accepts one connection),
@@ -11,8 +10,8 @@ import pathlib
 import threading
 import time
 
-# ensure project root on sys.path when run as script
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+# ensure project root on sys.path when run as script from tests/demo
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
 from app import server, client
 

@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""Check MySQL users table existence + row count using storage.db helper.
+
+This was previously appended accidentally to `check_db.py` — moved here.
+"""
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -5,8 +10,8 @@ import traceback
 import sys
 from pathlib import Path
 
-# Ensure repository root is on sys.path when running this script from scripts/
-repo_root = Path(__file__).resolve().parents[1]
+# Ensure repository root is on sys.path when running this script from tests/tools/
+repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 
 try:

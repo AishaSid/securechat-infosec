@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create and store a signed transcript entry for testing.
 
-Usage: python scripts/store_transcript.py --cert certs/server-cert.crt --key certs/server-private.key --db transcripts.db --message "hello"
+Usage: python tests/tools/store_transcript.py --cert certs/server-cert.crt --key certs/server-private.key --db transcripts.db --message "hello"
 
 This script signs the provided message with the private key and stores the
 certificate, signature, and payload in an SQLite DB via `storage.transcript`.
@@ -11,7 +11,7 @@ import base64
 import pathlib
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
 from storage import transcript
 from app.crypto import sign as sign_mod
@@ -57,3 +57,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+*** End Patch

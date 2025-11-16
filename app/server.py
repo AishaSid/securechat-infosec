@@ -16,6 +16,8 @@ from storage import transcript as transcript_store
 import base64
 import threading
 import sys
+import uuid
+from datetime import datetime, timezone
 
 
 def _send_bytes(conn: socket.socket, data: bytes) -> None:
@@ -194,6 +196,10 @@ def main(host: str | None = None, port: int | None = None) -> None:
         with conn:
             print("Accepted connection from", addr)
 
+            # create a session id and mark start time
+            session_id = str(uuid.uuid4())
+            session_start = datetime.now(timezone.utc).isoformat()
+
             # exchange certificates
             _send_bytes(conn, server_cert)
             client_cert = _recv_bytes(conn)
@@ -208,6 +214,22 @@ def main(host: str | None = None, port: int | None = None) -> None:
 
             # hand off to interactive handler
             handle_client(conn, server_cert, server_priv, key, client_cert, ca_path=ca_path, server_cert_path=server_cert_path)
+
+            # session ended; create a signed session receipt and store it
+            try:
+                from storage import session as session_store
+                session_end = datetime.now(timezone.utc).isoformat()
+                transcript_db = os.getenv("TRANSCRIPT_DB", "transcripts.db")
+                # ensure DB schema exists
+                transcript_store.init_db(transcript_db)
+                # create and store receipt signed by server private key
+                try:
+                    rid = session_store.create_receipt(transcript_db, session_id, session_start, session_end, server_cert, server_key_path)
+                    print('Created session receipt id', rid)
+                except Exception as e:
+                    print('Failed to create session receipt:', e)
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
